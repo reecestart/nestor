@@ -1,0 +1,163 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Parameters": {
+    "ContactEmail": {
+      "Description": "REQUIRED - Email Address",
+      "Type": "String",
+      "AllowedPattern": "^[\\x20-\\x45]?[\\w-\\+]+(\\.[\\w]+)*@[\\w-]+(\\.[\\w]+)*(\\.[a-z]{2,})$",
+      "ConstraintDescription": "Must be a valid email address"
+    }
+  },
+  "Resources": {
+    "LowUtilizationAmazonEC2InstancesTopic": {
+      "Type": "AWS::SNS::Topic",
+      "Properties": {
+        "DisplayName": "low-utilization-amazon-ec2-instances",
+        "Subscription": [{
+            "Endpoint": {
+              "Fn::GetAtt": ["StopEC2InstancesFunction", "Arn"]
+            },
+            "Protocol": "lambda"
+          },
+          {
+            "Endpoint": {"Ref": "ContactEmail"},
+            "Protocol": "email"
+          }
+        ]
+      }
+    },
+    "StopEC2InstancesFunction": {
+      "Type": "AWS::Lambda::Function",
+      "Properties": {
+        "Handler": "lambda_function.lambda_handler",
+        "Role": {
+          "Fn::GetAtt": ["LambdaExecutionRole", "Arn"]
+        },
+        "Code": {
+          "ZipFile": {
+            "Fn::Join": ["", [
+              "import json",
+              "import boto3",
+              "def lambda_handler(event, context):",
+              "    message = event['Records'][0]['Sns']['Message']",
+              "    # check if the message is a string or list",
+              "    if isinstance(message, basestring):",
+              "        message = json.loads(message)",
+              "    print \"You should stop \" + str(message['detail']['check-item-detail']['Instance ID'])",
+              "    print \"Which is running in \" + str(message['detail']['check-item-detail']['Region/AZ'])",
+              "    print \"As it will save \" + str(message['detail']['check-item-detail']['Estimated Monthly Savings']) + \" a month\"",
+              "    region = str(message['detail']['check-item-detail']['Region/AZ'])[:-1]",
+              "    print \"Region is \" + region",
+              "    instanceId = str(message['detail']['check-item-detail']['Instance ID'])",
+              "    print \"Instance ID is \" + instanceId",
+              "    ec2 = boto3.resource('ec2', region_name=region)",
+              "    listOfInstanceIds = instanceId.split()",
+              "    shuttingDown = ec2.instances.filter(InstanceIds=listOfInstanceIds).stop()",
+              "    print shuttingDown",
+              "    client = boto3.client('ec2', region_name=region)",
+              "    response = client.create_tags(",
+              "                        Resources=[",
+              "                            instanceId,",
+              "                        ],",
+              "                        Tags=[",
+              "                            {",
+              "                                'Key': 'Scrooge',",
+              "                                'Value': 'McDuck'",
+              "                            },",
+              "                        ]",
+              "                    )",
+              "    print response"
+            ]]
+          }
+        },
+        "Runtime": "python2.7"
+      }
+    },
+    "LambdaExecutionRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [{
+            "Effect": "Allow",
+            "Principal": {
+              "Service": ["lambda.amazonaws.com"]
+            },
+            "Action": ["sts:AssumeRole"]
+          }]
+        },
+        "Path": "/",
+        "Policies": [{
+          "PolicyName": "root",
+          "PolicyDocument": {
+            "Version": "2012-10-17",
+            "Statement": [{
+              "Sid": "AllowCloudWatchLogs",
+              "Action": "logs:*",
+              "Effect": "Allow",
+              "Resource": "arn:aws:logs:*:*:*"
+            }, {
+              "Sid": "AllowEC2CreateTagsStopInstances",
+              "Action": ["ec2:CreateTags", "ec2:StopInstances"],
+              "Effect": "Allow",
+              "Resource": "*"
+            }]
+          }
+        }]
+      }
+    },
+    "LowUtilizationAmazonEC2InstancesSNSPolicy": {
+      "Type": "AWS::SNS::TopicPolicy",
+      "Properties": {
+        "Topics": [{
+          "Ref": "LowUtilizationAmazonEC2InstancesTopic"
+        }],
+        "PolicyDocument": {
+          "Version": "2012-10-17",
+          "Id": "__default_policy_ID",
+          "Statement": [{
+              "Sid": "__default_statement_ID",
+              "Effect": "Allow",
+              "Principal": {
+                "AWS": "*"
+              },
+              "Action": [
+                "SNS:GetTopicAttributes",
+                "SNS:SetTopicAttributes",
+                "SNS:AddPermission",
+                "SNS:RemovePermission",
+                "SNS:DeleteTopic",
+                "SNS:Subscribe",
+                "SNS:ListSubscriptionsByTopic",
+                "SNS:Publish",
+                "SNS:Receive"
+              ],
+              "Resource": {
+                "Ref": "LowUtilizationAmazonEC2InstancesTopic"
+              },
+              "Condition": {
+                "StringEquals": {
+                  "AWS:SourceOwner": {
+                    "Ref": "AWS::AccountId"
+                  }
+                }
+              }
+            },
+            {
+              "Sid": "AWSEventsPublishToSNSTopic",
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "events.amazonaws.com"
+              },
+              "Action": "sns:Publish",
+              "Resource": {
+                "Ref": "LowUtilizationAmazonEC2InstancesTopic"
+              }
+            }
+          ]
+        }
+      }
+    }
+  },
+  "Description": "low-utilization-ec2-instances"
+}
