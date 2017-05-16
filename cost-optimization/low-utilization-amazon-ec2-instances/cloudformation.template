@@ -31,9 +31,7 @@
       "Properties": {
         "Action": "lambda:InvokeFunction",
         "Principal": "sns.amazonaws.com",
-        "SourceArn": {
-          "Fn::GetAtt": ["LowUtilizationAmazonEC2InstancesTopic", "Arn"]
-          },
+        "SourceArn": { "Ref": "LowUtilizationAmazonEC2InstancesTopic" },
         "FunctionName": {
           "Fn::GetAtt": [ "StopEC2InstancesFunction", "Arn" ]
         }
@@ -42,7 +40,7 @@
     "StopEC2InstancesFunction": {
       "Type": "AWS::Lambda::Function",
       "Properties": {
-        "Handler": "lambda_function.lambda_handler",
+        "Handler": "index.lambda_handler",
         "Role": {
           "Fn::GetAtt": ["LambdaExecutionRole", "Arn"]
         },
@@ -74,8 +72,8 @@
               "                        ],",
               "                        Tags=[",
               "                            {",
-              "                                'Key': 'Scrooge',",
-              "                                'Value': 'McDuck'",
+              "                                'Key': 'Nestor',",
+              "                                'Value': 'Was Here'",
               "                            },",
               "                        ]",
               "                    )",
