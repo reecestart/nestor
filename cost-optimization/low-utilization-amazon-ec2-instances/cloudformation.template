@@ -170,7 +170,6 @@
           ]
         }
       }
-    }
-  },
+    },
   "Description": "low-utilization-ec2-instances"
 }
