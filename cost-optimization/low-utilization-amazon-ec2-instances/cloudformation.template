@@ -32,7 +32,7 @@
         "Action": "lambda:InvokeFunction",
         "Principal": "sns.amazonaws.com",
         "SourceArn": {
-          "Fn::GetAtt": ["LowUtilizationAmazonEC2InstancesTopic", "TopicName"]
+          "Fn::GetAtt": ["LowUtilizationAmazonEC2InstancesTopic", "Arn"]
           },
         "FunctionName": {
           "Fn::GetAtt": [ "StopEC2InstancesFunction", "Arn" ]
