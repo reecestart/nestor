@@ -26,8 +26,21 @@
         ]
       }
     },
+    "LambdaInvokePermission": {
+      "Type": "AWS::Lambda::Permission",
+      "Properties": {
+        "Action": "lambda:InvokeFunction",
+        "Principal": "sns.amazonaws.com",
+        "SourceArn": { "Ref": ["LowUtilizationAmazonEC2InstancesTopic", "Arn"],
+        "FunctionName": {
+          "Fn::GetAtt": [ "StopEC2InstancesFunction", "Arn" ]
+        }
+      }
+    }
+  },
     "StopEC2InstancesFunction": {
       "Type": "AWS::Lambda::Function",
+      "Description": "Stops and Tags Low Utilization EC2 Instances based off Trusted Advisor Check recommendations, CloudWatch Events and an SNS Topic",
       "Properties": {
         "Handler": "lambda_function.lambda_handler",
         "Role": {
@@ -88,7 +101,7 @@
         },
         "Path": "/",
         "Policies": [{
-          "PolicyName": "root",
+          "PolicyName": "AllowCloudWatchLogsAndEC2CreateTagsStopInstances",
           "PolicyDocument": {
             "Version": "2012-10-17",
             "Statement": [{
