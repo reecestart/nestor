@@ -31,16 +31,16 @@
       "Properties": {
         "Action": "lambda:InvokeFunction",
         "Principal": "sns.amazonaws.com",
-        "SourceArn": { "Ref": "LowUtilizationAmazonEC2InstancesSNSPolicy" },
+        "SourceArn": {
+          "Fn::GetAtt": ["LowUtilizationAmazonEC2InstancesTopic", "TopicName"]
+          },
         "FunctionName": {
           "Fn::GetAtt": [ "StopEC2InstancesFunction", "Arn" ]
         }
       }
-    }
-  },
+    },
     "StopEC2InstancesFunction": {
       "Type": "AWS::Lambda::Function",
-      "Description": "Stops and Tags Low Utilization EC2 Instances based off Trusted Advisor Check recommendations, CloudWatch Events and an SNS Topic",
       "Properties": {
         "Handler": "lambda_function.lambda_handler",
         "Role": {
@@ -101,7 +101,7 @@
         },
         "Path": "/",
         "Policies": [{
-          "PolicyName": "AllowCloudWatchLogsAndEC2CreateTagsStopInstances",
+          "PolicyName": "root",
           "PolicyDocument": {
             "Version": "2012-10-17",
             "Statement": [{
@@ -170,6 +170,7 @@
           ]
         }
       }
-    },
+    }
+  },
   "Description": "low-utilization-ec2-instances"
 }
